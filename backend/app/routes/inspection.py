@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from app.database import inspection_collection
-from app.models.inspection import InspectionPlan, InspectionTask, InspectionRecord
+from app.models.inspection import InspectionPlan, InspectionTask, InspectionRecord, InspectionPlanUpdate, InspectionTaskUpdate
 from bson import ObjectId
 from typing import List, Optional
 from datetime import datetime
@@ -41,10 +41,18 @@ async def get_inspection_plan(id: str):
     raise HTTPException(status_code=404, detail="巡检计划不存在")
 
 @router.put("/plan/{id}", response_description="更新巡检计划")
-async def update_inspection_plan(id: str, plan_update: dict):
-    result = inspection_collection.update_one({"_id": ObjectId(id)}, {"$set": plan_update})
+async def update_inspection_plan(id: str, plan_update: InspectionPlanUpdate):
+    plan = inspection_collection.find_one({"_id": ObjectId(id)})
+    if not plan:
+        raise HTTPException(status_code=404, detail="巡检计划不存在")
+    
+    update_data = plan_update.model_dump(exclude_unset=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="未提供任何更新数据")
+    
+    result = inspection_collection.update_one({"_id": ObjectId(id)}, {"$set": update_data})
     if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="巡检计划不存在或未更新")
+        raise HTTPException(status_code=400, detail="数据未发生变化")
     return {"message": "巡检计划更新成功"}
 
 @router.delete("/plan/{id}", response_description="删除巡检计划")
@@ -83,10 +91,18 @@ async def get_inspection_tasks(page: int = 1, page_size: int = 10, status: Optio
     return {"data": tasks, "total": total, "page": page, "page_size": page_size}
 
 @router.put("/task/{id}", response_description="更新巡检任务")
-async def update_inspection_task(id: str, task_update: dict):
-    result = inspection_collection.update_one({"_id": ObjectId(id)}, {"$set": task_update})
+async def update_inspection_task(id: str, task_update: InspectionTaskUpdate):
+    task = inspection_collection.find_one({"_id": ObjectId(id)})
+    if not task:
+        raise HTTPException(status_code=404, detail="巡检任务不存在")
+    
+    update_data = task_update.model_dump(exclude_unset=True)
+    if not update_data:
+        raise HTTPException(status_code=400, detail="未提供任何更新数据")
+    
+    result = inspection_collection.update_one({"_id": ObjectId(id)}, {"$set": update_data})
     if result.modified_count == 0:
-        raise HTTPException(status_code=404, detail="巡检任务不存在或未更新")
+        raise HTTPException(status_code=400, detail="数据未发生变化")
     return {"message": "巡检任务更新成功"}
 
 @router.post("/record", response_description="提交巡检记录")

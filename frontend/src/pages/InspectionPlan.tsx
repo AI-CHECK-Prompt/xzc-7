@@ -69,6 +69,12 @@ function InspectionPlanPage() {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
+      
+      if (values.start_date && values.end_date && values.end_date.isBefore(values.start_date)) {
+        message.error('结束日期必须晚于开始日期');
+        return;
+      }
+
       const planData: InspectionPlan = {
         ...values,
         start_date: values.start_date ? values.start_date.toISOString() : '',
@@ -84,8 +90,9 @@ function InspectionPlanPage() {
       }
       setIsModalOpen(false);
       fetchPlans();
-    } catch (error) {
-      message.error('提交失败');
+    } catch (error: any) {
+      const errorMessage = error?.response?.data?.detail || error?.message || '提交失败';
+      message.error(errorMessage);
     }
   };
 
