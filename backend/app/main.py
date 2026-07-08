@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import equipment, inspection, repair
+from app.routes import equipment, inspection, repair, maintenance
 
 app = FastAPI(title="医疗设备巡检管理系统", version="1.0.0")
 
@@ -15,6 +15,7 @@ app.add_middleware(
 app.include_router(equipment.router, prefix="/api/equipment", tags=["设备档案"])
 app.include_router(inspection.router, prefix="/api/inspection", tags=["巡检计划"])
 app.include_router(repair.router, prefix="/api/repair", tags=["故障报修"])
+app.include_router(maintenance.router, prefix="/api/maintenance", tags=["设备维保"])
 
 @app.get("/")
 async def root():

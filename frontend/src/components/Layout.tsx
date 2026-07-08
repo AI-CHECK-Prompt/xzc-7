@@ -1,5 +1,5 @@
 import { Layout as AntLayout, Menu } from 'antd';
-import { AppstoreOutlined, CalendarOutlined, WarningOutlined } from '@ant-design/icons';
+import { AppstoreOutlined, CalendarOutlined, WarningOutlined, SettingOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 const { Header, Content, Sider } = AntLayout;
@@ -27,6 +27,16 @@ function Layout({ children }: LayoutProps) {
       key: '/repair',
       icon: <WarningOutlined />,
       label: '故障报修',
+    },
+    {
+      key: '/maintenance',
+      icon: <SettingOutlined />,
+      label: '维保计划',
+    },
+    {
+      key: '/maintenance/record',
+      icon: <FileTextOutlined />,
+      label: '维保记录',
     },
   ];
 

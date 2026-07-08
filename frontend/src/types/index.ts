@@ -64,6 +64,68 @@ export interface RepairOrder {
   remarks?: string;
 }
 
+export interface MaintenanceCycle {
+  _id?: string;
+  cycle_name: string;
+  equipment_code: string;
+  cycle_type: string;
+  interval_days: number;
+  reminder_days: number;
+  status: string;
+  created_at?: string;
+}
+
+export interface MaintenancePlan {
+  _id?: string;
+  plan_name: string;
+  equipment_codes: string[];
+  cycle_type: string;
+  start_date: string;
+  end_date: string;
+  assignee: string;
+  status: string;
+  created_at?: string;
+  tasks?: MaintenanceTask[];
+}
+
+export interface MaintenanceTask {
+  _id?: string;
+  plan_id: string;
+  equipment_code: string;
+  equipment_name?: string;
+  scheduled_date: string;
+  assignee: string;
+  status: string;
+  actual_date?: string;
+  maintenance_result?: string;
+  remarks?: string;
+  created_at?: string;
+}
+
+export interface MaintenanceRecord {
+  _id?: string;
+  equipment_code: string;
+  equipment_name: string;
+  maintainer: string;
+  maintenance_date: string;
+  maintenance_type: string;
+  items: Record<string, unknown>[];
+  overall_status: string;
+  remarks?: string;
+  created_at?: string;
+}
+
+export interface MaintenanceReminder {
+  _id?: string;
+  equipment_code: string;
+  equipment_name: string;
+  due_date: string;
+  days_remaining: number;
+  assignee: string;
+  reminder_status: string;
+  created_at?: string;
+}
+
 export interface PagedResponse<T> {
   data: T[];
   total: number;

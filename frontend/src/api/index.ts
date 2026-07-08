@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Equipment, InspectionPlan, InspectionTask, InspectionRecord, RepairOrder, PagedResponse } from '../types';
+import type { Equipment, InspectionPlan, InspectionTask, InspectionRecord, RepairOrder, MaintenanceCycle, MaintenancePlan, MaintenanceTask, MaintenanceRecord, MaintenanceReminder, PagedResponse } from '../types';
 
 const api = axios.create({
   baseURL: '/api',
@@ -40,4 +40,34 @@ export const repairApi = {
   update: (id: string, data: Partial<RepairOrder>) => api.put(`/repair/${id}`, data),
   delete: (id: string) => api.delete(`/repair/${id}`),
   getRecords: (equipment_code: string) => api.get<RepairOrder[]>(`/repair/equipment/${equipment_code}`),
+};
+
+export const maintenanceApi = {
+  createCycle: (data: MaintenanceCycle) => api.post('/maintenance/cycle', data),
+  listCycles: (params?: { page?: number; page_size?: number; equipment_code?: string; status?: string }) => 
+    api.get<PagedResponse<MaintenanceCycle>>('/maintenance/cycle', { params }),
+  detailCycle: (id: string) => api.get<MaintenanceCycle>(`/maintenance/cycle/${id}`),
+  updateCycle: (id: string, data: Partial<MaintenanceCycle>) => api.put(`/maintenance/cycle/${id}`, data),
+  deleteCycle: (id: string) => api.delete(`/maintenance/cycle/${id}`),
+  
+  createPlan: (data: MaintenancePlan) => api.post('/maintenance/plan', data),
+  listPlans: (params?: { page?: number; page_size?: number; status?: string; assignee?: string }) => 
+    api.get<PagedResponse<MaintenancePlan>>('/maintenance/plan', { params }),
+  detailPlan: (id: string) => api.get<MaintenancePlan>(`/maintenance/plan/${id}`),
+  updatePlan: (id: string, data: Partial<MaintenancePlan>) => api.put(`/maintenance/plan/${id}`, data),
+  deletePlan: (id: string) => api.delete(`/maintenance/plan/${id}`),
+  
+  listTasks: (params?: { page?: number; page_size?: number; status?: string; assignee?: string; equipment_code?: string }) => 
+    api.get<PagedResponse<MaintenanceTask>>('/maintenance/task', { params }),
+  updateTask: (id: string, data: Partial<MaintenanceTask>) => api.put(`/maintenance/task/${id}`, data),
+  
+  submitRecord: (data: MaintenanceRecord) => api.post('/maintenance/record', data),
+  listRecords: (params?: { page?: number; page_size?: number; equipment_code?: string; overall_status?: string }) => 
+    api.get<PagedResponse<MaintenanceRecord>>('/maintenance/record', { params }),
+  getEquipmentRecords: (equipment_code: string) => api.get<MaintenanceRecord[]>(`/maintenance/record/${equipment_code}`),
+  
+  listReminders: (params?: { page?: number; page_size?: number; reminder_status?: string }) => 
+    api.get<PagedResponse<MaintenanceReminder>>('/maintenance/reminder', { params }),
+  generateReminders: () => api.post('/maintenance/reminder/generate'),
+  handleReminder: (id: string, data: Partial<MaintenanceReminder>) => api.put(`/maintenance/reminder/${id}`, data),
 };
