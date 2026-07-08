@@ -1,3 +1,4 @@
+import re
 from fastapi import APIRouter, HTTPException
 from app.database import equipment_collection
 from app.models.equipment import Equipment, EquipmentUpdate
@@ -61,12 +62,13 @@ async def delete_equipment(id: str):
 
 @router.get("/search/{keyword}", response_description="搜索设备")
 async def search_equipment(keyword: str):
+    escaped_keyword = re.escape(keyword)
     query = {
         "$or": [
-            {"equipment_code": {"$regex": keyword, "$options": "i"}},
-            {"name": {"$regex": keyword, "$options": "i"}},
-            {"model": {"$regex": keyword, "$options": "i"}},
-            {"department": {"$regex": keyword, "$options": "i"}}
+            {"equipment_code": {"$regex": escaped_keyword, "$options": "i"}},
+            {"name": {"$regex": escaped_keyword, "$options": "i"}},
+            {"model": {"$regex": escaped_keyword, "$options": "i"}},
+            {"department": {"$regex": escaped_keyword, "$options": "i"}}
         ]
     }
     equipment_list = list(equipment_collection.find(query))

@@ -57,16 +57,27 @@ async def update_repair_order(id: str, order_update: RepairUpdate):
     
     update_data["updated_at"] = datetime.now()
     
+    old_order = repair_collection.find_one({"_id": ObjectId(id)})
+    if not old_order:
+        raise HTTPException(status_code=404, detail="报修单不存在")
+    
     result = repair_collection.update_one({"_id": ObjectId(id)}, {"$set": update_data})
     if result.modified_count == 0:
         raise HTTPException(status_code=404, detail="报修单不存在或未更新")
     
-    order = repair_collection.find_one({"_id": ObjectId(id)})
-    if order and order.get("status") == "已完成":
-        equipment_collection.update_one(
-            {"equipment_code": order["equipment_code"]},
-            {"$set": {"status": "正常"}}
-        )
+    new_order = repair_collection.find_one({"_id": ObjectId(id)})
+    if new_order and old_order.get("status") != "已完成" and new_order.get("status") == "已完成":
+        equipment_code = new_order["equipment_code"]
+        unfinished_count = repair_collection.count_documents({
+            "equipment_code": equipment_code,
+            "_id": {"$ne": ObjectId(id)},
+            "status": {"$nin": ["已完成", "已取消"]}
+        })
+        if unfinished_count == 0:
+            equipment_collection.update_one(
+                {"equipment_code": equipment_code},
+                {"$set": {"status": "正常"}}
+            )
     
     return {"message": "报修单更新成功"}
 
