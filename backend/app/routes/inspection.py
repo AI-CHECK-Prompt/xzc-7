@@ -1,5 +1,5 @@
 from fastapi import APIRouter, HTTPException
-from app.database import inspection_collection
+from app.database import inspection_collection, equipment_collection
 from app.models.inspection import InspectionPlan, InspectionTask, InspectionRecord, InspectionPlanUpdate, InspectionTaskUpdate
 from bson import ObjectId
 from typing import List, Optional
@@ -65,11 +65,23 @@ async def delete_inspection_plan(id: str):
 @router.post("/task", response_description="创建巡检任务")
 async def create_inspection_task(task: InspectionTask):
     try:
+        equipment = equipment_collection.find_one({"equipment_code": task.equipment_code})
+        if not equipment:
+            raise HTTPException(status_code=404, detail=f"设备编号 {task.equipment_code} 不存在")
+        
         task_dict = task.model_dump()
         task_dict["type"] = "task"
         task_dict["created_at"] = datetime.now()
         result = inspection_collection.insert_one(task_dict)
+        
+        equipment_collection.update_one(
+            {"equipment_code": task.equipment_code},
+            {"$set": {"status": "巡检中"}}
+        )
+        
         return {"id": str(result.inserted_id), "message": "巡检任务创建成功"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -108,11 +120,24 @@ async def update_inspection_task(id: str, task_update: InspectionTaskUpdate):
 @router.post("/record", response_description="提交巡检记录")
 async def submit_inspection_record(record: InspectionRecord):
     try:
+        equipment = equipment_collection.find_one({"equipment_code": record.equipment_code})
+        if not equipment:
+            raise HTTPException(status_code=404, detail=f"设备编号 {record.equipment_code} 不存在")
+        
         record_dict = record.model_dump()
         record_dict["type"] = "record"
         record_dict["created_at"] = datetime.now()
         result = inspection_collection.insert_one(record_dict)
+        
+        new_status = "故障" if record.overall_status == "异常" else "正常"
+        equipment_collection.update_one(
+            {"equipment_code": record.equipment_code},
+            {"$set": {"status": new_status}}
+        )
+        
         return {"id": str(result.inserted_id), "message": "巡检记录提交成功"}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

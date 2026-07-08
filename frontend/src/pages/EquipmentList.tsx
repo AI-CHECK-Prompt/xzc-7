@@ -111,6 +111,7 @@ function EquipmentList() {
     '故障': 'red',
     '维修中': 'orange',
     '停用': 'gray',
+    '巡检中': 'blue',
   };
 
   const columns = [
@@ -211,6 +212,7 @@ function EquipmentList() {
           <Select.Option value="故障">故障</Select.Option>
           <Select.Option value="维修中">维修中</Select.Option>
           <Select.Option value="停用">停用</Select.Option>
+          <Select.Option value="巡检中">巡检中</Select.Option>
         </Select>
       </Space>
 

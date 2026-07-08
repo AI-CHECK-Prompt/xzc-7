@@ -11,7 +11,7 @@ class Equipment(BaseModel):
     location: str = Field(..., description="安装位置")
     purchase_date: datetime = Field(..., description="采购日期")
     warranty_period: Optional[int] = Field(None, description="保修期(月)")
-    status: str = Field("正常", description="设备状态: 正常/故障/维修中/停用")
+    status: str = Field("正常", description="设备状态: 正常/故障/维修中/停用/巡检中")
     
 class EquipmentUpdate(BaseModel):
     name: Optional[str] = None
