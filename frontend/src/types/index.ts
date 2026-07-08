@@ -9,8 +9,6 @@ export interface Equipment {
   purchase_date: string;
   warranty_period?: number;
   status: string;
-  maintenance_records?: Record<string, unknown>[];
-  inspection_records?: Record<string, unknown>[];
 }
 
 export interface InspectionPlan {

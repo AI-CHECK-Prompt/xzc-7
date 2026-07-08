@@ -175,12 +175,6 @@ async def submit_maintenance_record(record: MaintenanceRecord):
         record_dict["type"] = "record"
         record_dict["created_at"] = datetime.now()
         result = maintenance_collection.insert_one(record_dict)
-        
-        equipment_collection.update_one(
-            {"equipment_code": record.equipment_code},
-            {"$push": {"maintenance_records": record_dict}}
-        )
-        
         return {"id": str(result.inserted_id), "message": "维保记录提交成功"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -240,9 +234,12 @@ async def generate_maintenance_reminders():
             if not equipment:
                 continue
             
-            last_maintenance = equipment.get("maintenance_records", [])
-            if last_maintenance:
-                last_date = max([r.get("maintenance_date", datetime.min) for r in last_maintenance])
+            last_record = maintenance_collection.find_one(
+                {"type": "record", "equipment_code": cycle["equipment_code"]},
+                sort=[("maintenance_date", -1)]
+            )
+            if last_record:
+                last_date = last_record.get("maintenance_date", datetime.min)
             else:
                 last_date = equipment.get("purchase_date", datetime.min)
             
