@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import Optional, List, Dict
 from datetime import datetime
+from app.utils.time_utils import get_utc_now
 
 class SkillTag(BaseModel):
     equipment_type: str = Field(..., description="设备类型")
@@ -111,7 +112,7 @@ class ManualAdjustment(BaseModel):
     adjustment_reason: str = Field(..., description="调整原因")
     previous_assignee: Optional[str] = Field(None, description="调整前派单对象")
     new_assignee: str = Field(..., description="调整后派单对象")
-    adjustment_time: datetime = Field(default_factory=datetime.now, description="调整时间")
+    adjustment_time: datetime = Field(default_factory=get_utc_now, description="调整时间")
 
 class DispatchHistory(BaseModel):
     task_id: str = Field(..., description="任务ID")
@@ -122,7 +123,7 @@ class DispatchHistory(BaseModel):
     selected_staff_name: Optional[str] = Field(None, description="选中人员姓名")
     dispatch_method: str = Field("auto", description="派单方式: auto/manual")
     dispatch_reason: str = Field("", description="派单原因")
-    dispatch_time: datetime = Field(default_factory=datetime.now, description="派单时间")
+    dispatch_time: datetime = Field(default_factory=get_utc_now, description="派单时间")
     dispatch_duration_ms: float = Field(0.0, description="派单耗时(毫秒)")
     escalation_level: int = Field(0, description="使用的升级级别")
     manual_adjustment: Optional[ManualAdjustment] = Field(None, description="人工调整信息")
@@ -133,6 +134,6 @@ class DispatchHistory(BaseModel):
 class DispatchLock(BaseModel):
     task_id: str = Field(..., description="任务ID")
     lock_owner: str = Field(..., description="锁持有者")
-    lock_time: datetime = Field(default_factory=datetime.now, description="加锁时间")
+    lock_time: datetime = Field(default_factory=get_utc_now, description="加锁时间")
     expires_at: datetime = Field(..., description="过期时间")
     is_active: bool = Field(True, description="是否有效")

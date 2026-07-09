@@ -23,6 +23,12 @@ from app.models.dispatch import (
     EscalationRule,
     ScoringWeight
 )
+from app.utils.time_utils import (
+    get_utc_now,
+    parse_and_normalize_to_utc,
+    calculate_hours_between,
+    ensure_aware
+)
 
 logger = logging.getLogger(__name__)
 
@@ -74,7 +80,7 @@ def get_current_config() -> Optional[DispatchConfig]:
 
 def acquire_dispatch_lock(task_id: str, lock_owner: str, timeout_seconds: int = 300) -> bool:
     try:
-        now = datetime.now()
+        now = get_utc_now()
         expires_at = now + timedelta(seconds=timeout_seconds)
         
         expired_locks = dispatch_lock_collection.delete_many({
@@ -124,11 +130,18 @@ def is_staff_available(staff: dict, config: DispatchConfig) -> bool:
     work_start_time = staff.get("work_start_time")
     if work_start_time:
         max_continuous = staff.get("max_continuous_work_hours", 8.0)
-        if isinstance(work_start_time, str):
-            work_start_time = datetime.fromisoformat(work_start_time.replace("Z", "+00:00"))
-        continuous_hours = (datetime.now() - work_start_time).total_seconds() / 3600
-        if continuous_hours >= max_continuous:
-            return False
+        try:
+            work_start_utc = parse_and_normalize_to_utc(work_start_time)
+            if work_start_utc:
+                continuous_hours = calculate_hours_between(work_start_utc)
+                if continuous_hours >= max_continuous:
+                    return False
+        except Exception as e:
+            logger.error(
+                f"【派单服务】计算员工连续工作时长失败。"
+                f"员工ID: {staff.get('staff_id')}, 工作开始时间: {work_start_time}, "
+                f"错误: {e}"
+            )
     
     return True
 
@@ -277,9 +290,19 @@ def score_candidates(candidates: List[dict], config: DispatchConfig,
         
         work_start_time = staff.get("work_start_time")
         if work_start_time:
-            if isinstance(work_start_time, str):
-                work_start_time = datetime.fromisoformat(work_start_time.replace("Z", "+00:00"))
-            continuous_hours = (datetime.now() - work_start_time).total_seconds() / 3600
+            try:
+                work_start_utc = parse_and_normalize_to_utc(work_start_time)
+                if work_start_utc:
+                    continuous_hours = calculate_hours_between(work_start_utc)
+                else:
+                    continuous_hours = 0
+            except Exception as e:
+                logger.error(
+                    f"【派单服务】计算候选人员连续工作时长失败。"
+                    f"员工ID: {staff.get('staff_id')}, 工作开始时间: {work_start_time}, "
+                    f"错误: {e}"
+                )
+                continuous_hours = 0
         else:
             continuous_hours = 0
         max_hours = staff.get("max_continuous_work_hours", 8.0)
@@ -415,7 +438,7 @@ def execute_dispatch(task_id: str, equipment_code: str,
                     "assignee": selected_staff.staff_id,
                     "assignee_name": selected_staff.staff_name,
                     "dispatch_status": "已派单",
-                    "dispatch_time": datetime.now()
+                    "dispatch_time": get_utc_now()
                 }}
             )
             dispatch_reason = f"自动派单成功，综合评分: {selected_staff.total_score:.4f}"
@@ -493,7 +516,7 @@ def manual_dispatch(task_id: str, equipment_code: str,
             "assignee": staff_id,
             "assignee_name": staff["name"],
             "dispatch_status": "人工派单",
-            "dispatch_time": datetime.now(),
+            "dispatch_time": get_utc_now(),
             "manual_dispatch_locked": config.manual_dispatch_lock
         }
         
@@ -514,7 +537,7 @@ def manual_dispatch(task_id: str, equipment_code: str,
             "adjustment_reason": reason,
             "previous_assignee": previous_assignee,
             "new_assignee": staff_id,
-            "adjustment_time": datetime.now()
+            "adjustment_time": get_utc_now()
         }
         
         duration_ms = (time.time() - start_time) * 1000
