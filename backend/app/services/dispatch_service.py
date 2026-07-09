@@ -570,6 +570,12 @@ def re_dispatch(task_id: str) -> Dict[str, any]:
             {"$inc": {"current_task_count": -1}}
         )
     
+    if task.get("manual_dispatch_locked", False):
+        inspection_collection.update_one(
+            {"_id": ObjectId(task_id), "manual_dispatch_locked": True},
+            {"$set": {"manual_dispatch_locked": False}}
+        )
+    
     result = execute_dispatch(task_id, equipment_code, is_redispatch=True, previous_dispatch_id=previous_dispatch_id)
     
     return result
