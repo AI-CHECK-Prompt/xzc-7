@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from app.database import inspection_collection, equipment_collection
 from app.models.inspection import InspectionPlan, InspectionTask, InspectionRecord, InspectionPlanUpdate, InspectionTaskUpdate
+from app.services.dispatch_service import execute_dispatch
 from bson import ObjectId
 from typing import List, Optional
 from datetime import datetime
@@ -63,7 +64,7 @@ async def delete_inspection_plan(id: str):
     return {"message": "巡检计划删除成功"}
 
 @router.post("/task", response_description="创建巡检任务")
-async def create_inspection_task(task: InspectionTask):
+async def create_inspection_task(task: InspectionTask, auto_dispatch: bool = False):
     try:
         equipment = equipment_collection.find_one({"equipment_code": task.equipment_code})
         if not equipment:
@@ -72,14 +73,29 @@ async def create_inspection_task(task: InspectionTask):
         task_dict = task.model_dump()
         task_dict["type"] = "task"
         task_dict["created_at"] = datetime.now()
+        task_dict["dispatch_status"] = "待派单"
+        
         result = inspection_collection.insert_one(task_dict)
+        task_id = str(result.inserted_id)
         
         equipment_collection.update_one(
             {"equipment_code": task.equipment_code},
             {"$set": {"status": "巡检中"}}
         )
         
-        return {"id": str(result.inserted_id), "message": "巡检任务创建成功"}
+        dispatch_result = None
+        if auto_dispatch:
+            dispatch_result = execute_dispatch(task_id, task.equipment_code)
+        
+        response = {
+            "id": task_id,
+            "message": "巡检任务创建成功"
+        }
+        
+        if dispatch_result:
+            response["dispatch"] = dispatch_result
+        
+        return response
     except HTTPException:
         raise
     except Exception as e:
