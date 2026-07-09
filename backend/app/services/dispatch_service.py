@@ -356,7 +356,9 @@ def log_dispatch_history(task_id: str, equipment_code: str, task_type: str,
     return str(result.inserted_id)
 
 def execute_dispatch(task_id: str, equipment_code: str, 
-                     task_type: str = "inspection") -> Dict[str, any]:
+                     task_type: str = "inspection",
+                     is_redispatch: bool = False,
+                     previous_dispatch_id: Optional[str] = None) -> Dict[str, any]:
     start_time = time.time()
     
     config = get_current_config()
@@ -427,7 +429,9 @@ def execute_dispatch(task_id: str, equipment_code: str,
             dispatch_method="auto",
             dispatch_reason=dispatch_reason,
             dispatch_duration_ms=round(duration_ms, 2),
-            escalation_level=escalation_level
+            escalation_level=escalation_level,
+            is_redispatch=is_redispatch,
+            previous_dispatch_id=previous_dispatch_id
         )
         
         return {
@@ -542,6 +546,14 @@ def re_dispatch(task_id: str) -> Dict[str, any]:
     if not equipment_code:
         return {"success": False, "error": "任务未关联设备"}
     
+    previous_dispatch_id = None
+    last_history = dispatch_history_collection.find_one(
+        {"task_id": task_id},
+        sort=[("dispatch_time", -1)]
+    )
+    if last_history:
+        previous_dispatch_id = str(last_history["_id"])
+    
     previous_assignee = task.get("assignee")
     if previous_assignee:
         staff_collection.update_one(
@@ -549,16 +561,7 @@ def re_dispatch(task_id: str) -> Dict[str, any]:
             {"$inc": {"current_task_count": -1}}
         )
     
-    result = execute_dispatch(task_id, equipment_code)
-    result["is_redispatch"] = True
-    
-    if previous_assignee:
-        last_history = dispatch_history_collection.find_one(
-            {"task_id": task_id},
-            sort=[("dispatch_time", -1)]
-        )
-        if last_history:
-            result["previous_dispatch_id"] = str(last_history["_id"])
+    result = execute_dispatch(task_id, equipment_code, is_redispatch=True, previous_dispatch_id=previous_dispatch_id)
     
     return result
 
