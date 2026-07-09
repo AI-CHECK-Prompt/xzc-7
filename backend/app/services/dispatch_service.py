@@ -231,7 +231,7 @@ def filter_candidates(equipment_code: str, config: DispatchConfig,
             staff_location.get("longitude", 0)
         )
         
-        if distance > max_distance and escalation_level == 0:
+        if distance > max_distance:
             continue
         
         matched_strategy = None
@@ -255,7 +255,8 @@ def filter_candidates(equipment_code: str, config: DispatchConfig,
     return candidates
 
 def score_candidates(candidates: List[dict], config: DispatchConfig, 
-                     equipment_location: Dict[str, float]) -> List[CandidateScore]:
+                     equipment_location: Dict[str, float],
+                     max_distance: Optional[float] = None) -> List[CandidateScore]:
     scores = []
     weights = config.scoring_weights
     
@@ -264,7 +265,7 @@ def score_candidates(candidates: List[dict], config: DispatchConfig,
         distance = candidate["distance"]
         skill_score = candidate["skill_score"]
         
-        location_score = calculate_location_score(distance, config.max_distance_km)
+        location_score = calculate_location_score(distance, max_distance or config.max_distance_km)
         
         speed_kmh = 30.0
         estimated_arrival_minutes = (distance / speed_kmh) * 60 if speed_kmh > 0 else 60
@@ -389,7 +390,15 @@ def execute_dispatch(task_id: str, equipment_code: str,
                 continue
             
             equipment_location = get_equipment_location(equipment_code)
-            scores = score_candidates(candidates, config, equipment_location)
+            
+            max_distance = config.max_distance_km
+            if level > 0:
+                for rule in config.escalation_rules:
+                    if rule.level == level and rule.expand_distance_radius:
+                        max_distance = rule.expand_distance_radius
+                        break
+            
+            scores = score_candidates(candidates, config, equipment_location, max_distance)
             final_candidates.extend(candidates)
             final_scores = scores
             
